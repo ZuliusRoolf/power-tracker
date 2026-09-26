@@ -1,0 +1,36 @@
+[Unit]
+Description=Proxmox Power & Electricity Cost Monitor Daemon
+Documentation=https://github.com/your-username/power-tracker
+After=network.target network-online.target zigbee2mqtt.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/power-tracker
+EnvironmentFile=-/etc/power-monitor/config.env
+ExecStart=/opt/power-tracker/venv/bin/python3 /opt/power-tracker/monitor.py
+
+# Auto-recovery
+Restart=always
+RestartSec=10
+
+# Resource limits (Strict 512MB RAM constraint in Proxmox LXC)
+# monitor.py typically consumes 12-16MB RAM
+MemoryHigh=30M
+MemoryMax=40M
+CPUQuota=50%
+
+# Security & Sandboxing
+ProtectSystem=strict
+ReadWritePaths=/data /var/log
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=power-monitor
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,32 @@
+#!/sbin/openrc-run
+# ==============================================================================
+# OpenRC Service: Datasette Web UI for Proxmox Electricity Cost Visualizer
+# ==============================================================================
+# Target: Alpine Linux inside Proxmox LXC
+
+name="power-datasette"
+description="Datasette Visualizer for Proxmox Electricity Costs"
+
+: ${CONFIG_FILE:="/etc/power-monitor/config.env"}
+
+command="/opt/power-tracker/datasette/run-datasette.sh"
+command_user="root"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/${RC_SVCNAME}.log"
+error_log="/var/log/${RC_SVCNAME}.log"
+
+depend() {
+    need net
+    after power-monitor
+}
+
+start_pre() {
+    if [ -f "$CONFIG_FILE" ]; then
+        set -a
+        . "$CONFIG_FILE"
+        set +a
+    fi
+    checkpath -d -m 0755 /data
+    checkpath -f -m 0644 "$output_log"
+}

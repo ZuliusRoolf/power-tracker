@@ -1,0 +1,35 @@
+[Unit]
+Description=Datasette Web UI for Proxmox Electricity Cost Visualizer
+Documentation=https://github.com/your-username/power-tracker
+After=network.target network-online.target power-monitor.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/power-tracker
+EnvironmentFile=-/etc/power-monitor/config.env
+ExecStart=/opt/power-tracker/datasette/run-datasette.sh
+
+# Auto-recovery
+Restart=always
+RestartSec=10
+
+# Memory management for 512MB RAM LXC
+MemoryHigh=60M
+MemoryMax=80M
+CPUQuota=50%
+
+# Sandboxing
+ProtectSystem=strict
+ReadWritePaths=/data /tmp
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=power-datasette
+
+[Install]
+WantedBy=multi-user.target

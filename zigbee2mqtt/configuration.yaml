@@ -1,0 +1,76 @@
+# ==============================================================================
+# Zigbee2MQTT Minimal & Failsafe Configuration for Proxmox Power Tracking
+# ==============================================================================
+# Target: Proxmox LXC Container (Debian Slim / Alpine Linux, 512MB RAM)
+
+homeassistant: false
+permit_join: true
+
+# ------------------------------------------------------------------------------
+# Frontend & WebSocket API
+# ------------------------------------------------------------------------------
+# The Frontend provides the Web UI on port 8080 and opens an event WebSocket
+# endpoint at ws://localhost:8080/api consumed by monitor.py.
+frontend:
+  port: 8080
+  host: 0.0.0.0
+
+# ------------------------------------------------------------------------------
+# MQTT Settings (Local Mosquitto Broker)
+# ------------------------------------------------------------------------------
+# Mosquitto runs locally inside the LXC container with <2MB RAM footprint.
+mqtt:
+  base_topic: zigbee2mqtt
+  server: 'mqtt://127.0.0.1:1883'
+
+# ------------------------------------------------------------------------------
+# Serial Adapter Configuration: SONOFF Zigbee 3.0 USB Dongle Plus
+# ------------------------------------------------------------------------------
+# Pass through the USB dongle from Proxmox VE host into this LXC container.
+#
+# Use the persistent /dev/serial/by-id/... path rather than /dev/ttyACM0
+# or /dev/ttyUSB0 to avoid device reordering on host reboot.
+#
+# For SONOFF Dongle-P (TI CC2652P chipset):
+#   adapter: zstack
+#
+# For SONOFF Dongle Lite / Dongle-E (Silicon Labs EFR32MG21 chipset):
+#   adapter: ember
+# ------------------------------------------------------------------------------
+serial:
+  port: /dev/serial/by-id/usb-SONOFF_SONOFF_Dongle_Lite_MG21_308af7379da0ef11a1dfaaa361ce3355-if00-port0
+  adapter: ember
+  baudrate: 115200
+
+# ------------------------------------------------------------------------------
+# Failsafe External Converter for IKEA INSPELNING
+# ------------------------------------------------------------------------------
+# Loads the failsafe definition that strips state: OFF / TOGGLE and removes
+# the toggle switch from the Web UI.
+external_converters:
+  - inspelning-failsafe.js
+
+# ------------------------------------------------------------------------------
+# Device Definitions
+# ------------------------------------------------------------------------------
+devices:
+  # Replace '0x00124b00...' with the actual IEEE address of your IKEA INSPELNING plug
+  # Once paired, Z2M will match it to this friendly name and apply the failsafe.
+  '0x00124b00XXXXXXXX':
+    friendly_name: proxmox_power_plug
+    # CRITICAL: If power is cut at the wall, plug must turn back ON immediately
+    power_on_behavior: 'on'
+
+# ------------------------------------------------------------------------------
+# Advanced & Resource-Conscious Tuning (512MB RAM Container)
+# ------------------------------------------------------------------------------
+advanced:
+  log_level: info
+  log_output:
+    - console
+  network_key: GENERATE
+  pan_id: GENERATE
+  ext_pan_id: GENERATE
+  channel: 25
+  cache_state: true
+  output: json

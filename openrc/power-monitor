@@ -1,0 +1,33 @@
+#!/sbin/openrc-run
+# ==============================================================================
+# OpenRC Service: Proxmox Power & Electricity Cost Monitor
+# ==============================================================================
+# Target: Alpine Linux inside Proxmox LXC
+
+name="power-monitor"
+description="Proxmox Power & Electricity Cost Monitor Daemon"
+
+: ${CONFIG_FILE:="/etc/power-monitor/config.env"}
+
+command="/opt/power-tracker/venv/bin/python3"
+command_args="/opt/power-tracker/monitor.py"
+command_user="root"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/${RC_SVCNAME}.log"
+error_log="/var/log/${RC_SVCNAME}.log"
+
+depend() {
+    need net
+    after mosquitto zigbee2mqtt
+}
+
+start_pre() {
+    if [ -f "$CONFIG_FILE" ]; then
+        set -a
+        . "$CONFIG_FILE"
+        set +a
+    fi
+    checkpath -d -m 0755 /data
+    checkpath -f -m 0644 "$output_log"
+}
