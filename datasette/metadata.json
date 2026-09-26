@@ -1,87 +1,10 @@
 {
-  "title": "Proxmox VE Power & Electricity Cost Tracker",
-  "description": "Tracking electrical consumption and calculating monthly reimbursement for parents",
-  "plugins": {
-    "datasette-plot": {
-      "default_plots": {
-        "energy_monitor": {
-          "daily_costs": {
-            "type": "bar",
-            "x": "day",
-            "y": "total_cost",
-            "title": "Daily Electricity Cost ($)"
-          },
-          "monthly_costs": {
-            "type": "bar",
-            "x": "month",
-            "y": "total_cost",
-            "title": "Monthly Total Bill ($)"
-          }
-        }
-      }
-    }
-  },
+  "title": "Proxmox Host Power & Electricity Cost Tracker",
+  "description": "Electricity consumption and cost monitoring to calculate host electricity bills",
   "databases": {
     "energy_monitor": {
       "title": "Energy Monitor Database",
-      "description": "Live electricity monitoring from IKEA INSPELNING plug on Proxmox host",
-      "tables": {
-        "daily_costs": {
-          "title": "Daily Electricity Costs",
-          "description": "Daily aggregated electricity costs and consumption. Click for bar chart visualization.",
-          "plugins": {
-            "datasette-plot": {
-              "type": "bar",
-              "x": "day",
-              "y": "total_cost",
-              "title": "Daily Electricity Cost ($)"
-            }
-          }
-        },
-        "monthly_costs": {
-          "title": "Monthly Electricity Costs (Parents Bill)",
-          "description": "Monthly electricity bills for reimbursing parents. View total amount owed per calendar month.",
-          "plugins": {
-            "datasette-plot": {
-              "type": "bar",
-              "x": "month",
-              "y": "total_cost",
-              "title": "Monthly Total Bill ($)"
-            }
-          }
-        },
-        "parents_bill_summary": {
-          "title": "Parents Bill Summary",
-          "description": "Clean summary of amount owed, kilowatt-hours consumed, and average wattage per billing cycle."
-        },
-        "electricity_usage": {
-          "title": "Raw Telemetry Readings",
-          "description": "Raw power (W), lifetime energy (kWh), and calculated costs recorded by monitor.py",
-          "plugins": {
-            "datasette-plot": {
-              "type": "line",
-              "x": "timestamp",
-              "y": "current_power_w",
-              "title": "Real-time Power Draw (Watts)"
-            }
-          }
-        }
-      },
-      "queries": {
-        "last_30_days": {
-          "title": "Last 30 Days Cost & Usage",
-          "description": "Breakdown of the last 30 recorded days",
-          "sql": "SELECT day, total_cost, energy_kwh, avg_power_w, peak_power_w FROM daily_costs ORDER BY day DESC LIMIT 30;",
-          "plugins": {
-            "datasette-plot": {
-              "type": "bar",
-              "x": "day",
-              "y": "total_cost",
-              "title": "Last 30 Days Cost ($)"
-            }
-          }
-        }
-      }
+      "description": "Live electricity monitoring from IKEA INSPELNING plug on Proxmox host"
     }
   }
 }
