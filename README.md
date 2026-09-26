@@ -180,7 +180,7 @@ DB_PATH=/data/energy_monitor.db
 Z2M_WS_URL=ws://localhost:8080/api
 
 # Friendly name assigned to IKEA INSPELNING in Zigbee2MQTT
-DEVICE_FRIENDLY_NAME=proxmox_power_plug
+DEVICE_FRIENDLY_NAME=proxmox-power-plug
 
 # Power deadband (in Watts) to throttle redundant writes
 MIN_POWER_CHANGE_W=1.0

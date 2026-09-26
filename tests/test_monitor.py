@@ -43,7 +43,8 @@ class TestMessageParser(unittest.TestCase):
         })
         res = parse_z2m_message(msg, "proxmox_power_plug")
         self.assertIsNotNone(res)
-        power, energy = res
+        dev, power, energy = res
+        self.assertEqual(dev, "proxmox_power_plug")
         self.assertEqual(power, 42.5)
         self.assertEqual(energy, 12.345)
 
@@ -55,7 +56,7 @@ class TestMessageParser(unittest.TestCase):
         })
         res = parse_z2m_message(msg, "proxmox_power_plug")
         self.assertIsNotNone(res)
-        power, energy = res
+        dev, power, energy = res
         self.assertEqual(power, 55.0)
         self.assertEqual(energy, 20.0)
 
@@ -64,16 +65,16 @@ class TestMessageParser(unittest.TestCase):
         # If target device is empty or matches payload
         res = parse_z2m_message(msg, "")
         self.assertIsNotNone(res)
-        power, energy = res
+        dev, power, energy = res
         self.assertEqual(power, 60.1)
         self.assertEqual(energy, 33.2)
 
-    def test_device_filter_rejection(self):
+    def test_bridge_messages_ignored(self):
         msg = json.dumps({
-            "topic": "zigbee2mqtt/living_room_lamp",
-            "payload": {"power": 10.0, "energy": 5.0}
+            "topic": "bridge/state",
+            "payload": {"state": "online"}
         })
-        res = parse_z2m_message(msg, "proxmox_power_plug")
+        res = parse_z2m_message(msg)
         self.assertIsNone(res)
 
     def test_missing_power_or_energy_ignored(self):

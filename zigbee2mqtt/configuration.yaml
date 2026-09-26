@@ -57,7 +57,7 @@ devices:
   # Replace '0x00124b00...' with the actual IEEE address of your IKEA INSPELNING plug
   # Once paired, Z2M will match it to this friendly name and apply the failsafe.
   '0x00124b00XXXXXXXX':
-    friendly_name: proxmox_power_plug
+    friendly_name: proxmox-power-plug
     # CRITICAL: If power is cut at the wall, plug must turn back ON immediately
     power_on_behavior: 'on'
 

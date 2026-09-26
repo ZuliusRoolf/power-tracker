@@ -190,11 +190,26 @@ def record_usage(
 # -----------------------------------------------------------------------------
 # Payload Extraction & Normalization
 # -----------------------------------------------------------------------------
-def parse_z2m_message(raw_msg: str, target_device: str) -> Optional[Tuple[float, float]]:
+def normalize_name(name: str) -> str:
+    """Normalize device name for lenient matching (case, spaces, dashes, underscores)."""
+    return name.lower().replace("-", "").replace("_", "").replace(" ", "")
+
+
+def is_matching_device(topic: str, target: str) -> bool:
+    """Check if topic matches target device name leniently."""
+    if not target:
+        return True
+    topic_clean = topic.split("/")[-1]
+    if topic_clean == target or topic == target:
+        return True
+    return normalize_name(topic_clean) == normalize_name(target)
+
+
+def parse_z2m_message(raw_msg: str, target_device: str = "") -> Optional[Tuple[str, Optional[float], Optional[float]]]:
     """
     Parse a WebSocket message emitted by Zigbee2MQTT.
 
-    Returns (current_power_w, lifetime_energy_kwh) if relevant, otherwise None.
+    Returns (device_name, power_w, lifetime_kwh) if relevant, otherwise None.
     Handles multiple Zigbee2MQTT frame structures:
       1. Standard MQTT bridge frame: {"topic": "zigbee2mqtt/...", "payload": {...}}
       2. Nested JSON string payload: {"topic": "zigbee2mqtt/...", "payload": "{...}"}
@@ -211,6 +226,10 @@ def parse_z2m_message(raw_msg: str, target_device: str) -> Optional[Tuple[float,
     topic = data.get("topic", "")
     payload: Any = data.get("payload", data)
 
+    # Ignore bridge management topics
+    if topic.startswith("bridge/") or topic == "bridge":
+        return None
+
     # If payload is a serialized JSON string, decode it
     if isinstance(payload, str):
         try:
@@ -221,31 +240,34 @@ def parse_z2m_message(raw_msg: str, target_device: str) -> Optional[Tuple[float,
     if not isinstance(payload, dict):
         return None
 
-    # Check device filter if topic is present
-    if topic and target_device:
-        # Topic is typically "zigbee2mqtt/<friendly_name>"
-        topic_suffix = topic.split("/")[-1]
-        if topic_suffix != target_device and topic != target_device:
-            return None
-
-    # Alternatively check friendly_name inside payload or data wrapper
-    if target_device and "friendly_name" in payload:
-        if payload["friendly_name"] != target_device:
-            return None
+    device_name = topic.split("/")[-1] if topic else payload.get("friendly_name", "unknown_plug")
 
     # Extract power (W) and energy (kWh)
     power_raw = payload.get("power")
     energy_raw = payload.get("energy")
 
-    if power_raw is None or energy_raw is None:
+    if power_raw is None and energy_raw is None:
         return None
 
-    try:
-        power = float(power_raw)
-        energy = float(energy_raw)
-        return (power, energy)
-    except (ValueError, TypeError):
+    power: Optional[float] = None
+    energy: Optional[float] = None
+
+    if power_raw is not None:
+        try:
+            power = float(power_raw)
+        except (ValueError, TypeError):
+            pass
+
+    if energy_raw is not None:
+        try:
+            energy = float(energy_raw)
+        except (ValueError, TypeError):
+            pass
+
+    if power is None and energy is None:
         return None
+
+    return (device_name, power, energy)
 
 
 # -----------------------------------------------------------------------------
@@ -264,6 +286,11 @@ class PowerMonitor:
         self.last_logged_power: Optional[float] = None
         self.last_logged_energy: Optional[float] = None
         self.last_logged_time: float = 0.0
+
+        # Cached live telemetry for pairing partial updates
+        self.cached_power: Optional[float] = None
+        self.cached_energy: Optional[float] = None
+        self.active_device: Optional[str] = None
 
     def start(self) -> None:
         """Initialize database connection and launch async event loop."""
@@ -293,6 +320,40 @@ class PowerMonitor:
                 logger.info("Database connection cleanly closed.")
             except Exception as e:
                 logger.warning(f"Error closing DB: {e}")
+
+    def handle_message(
+        self, device_name: str, power: Optional[float], energy: Optional[float]
+    ) -> None:
+        """Route incoming telemetry, cache partial measurements, and trigger recording."""
+        # Match configured target device leniently or auto-adopt first power-reporting device
+        if self.target_device:
+            if not is_matching_device(device_name, self.target_device):
+                if self.active_device is None:
+                    logger.info(
+                        f"Detected smart plug '{device_name}' reporting telemetry (power={power}, energy={energy}). "
+                        f"Configured target is '{self.target_device}'. Auto-adopting '{device_name}' as the active power meter."
+                    )
+                    self.active_device = device_name
+                elif self.active_device != device_name:
+                    logger.debug(f"Ignoring device '{device_name}' (active device is '{self.active_device}')")
+                    return
+            else:
+                self.active_device = device_name
+        else:
+            self.active_device = device_name
+
+        if power is not None:
+            self.cached_power = power
+        if energy is not None:
+            self.cached_energy = energy
+
+        if self.cached_power is not None and self.cached_energy is not None:
+            self.process_telemetry(self.cached_power, self.cached_energy)
+        else:
+            logger.info(
+                f"Received partial telemetry from '{self.active_device}': "
+                f"power={self.cached_power}W, energy={self.cached_energy}kWh. Waiting for complete pair..."
+            )
 
     def process_telemetry(self, power_w: float, lifetime_kwh: float) -> None:
         """
@@ -395,8 +456,8 @@ class PowerMonitor:
 
                         parsed = parse_z2m_message(str(msg), self.target_device)
                         if parsed is not None:
-                            power_w, lifetime_kwh = parsed
-                            self.process_telemetry(power_w, lifetime_kwh)
+                            dev_name, power_w, lifetime_kwh = parsed
+                            self.handle_message(dev_name, power_w, lifetime_kwh)
 
             except asyncio.CancelledError:
                 logger.info("Async loop cancelled.")
