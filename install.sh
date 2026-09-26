@@ -193,6 +193,13 @@ if [[ "${SCRIPT_SRC_DIR}" != "${INSTALL_DIR}" ]]; then
     cp -r "${SCRIPT_SRC_DIR}/"* "${INSTALL_DIR}/"
 fi
 
+# Ensure all scripts have proper execution permissions
+chmod +x "${INSTALL_DIR}/datasette/run-datasette.sh" \
+         "${INSTALL_DIR}/monitor.py" \
+         "${INSTALL_DIR}/init_db.py" \
+         "${INSTALL_DIR}/install.sh" \
+         "${INSTALL_DIR}/setup-zigbee2mqtt.sh" 2>/dev/null || true
+
 # Create Python virtual environment
 if [[ ! -d "${VENV_DIR}" ]]; then
     python3 -m venv "${VENV_DIR}"
