@@ -70,10 +70,17 @@ else
     echo -e "${BLUE}[INFO] Zigbee2MQTT already exists at ${Z2M_DIR}.${NC}"
 fi
 
-# 4. Build dependencies
-echo -e "${BLUE}[INFO] Installing Zigbee2MQTT packages via npm (this may take 1-2 minutes)...${NC}"
+# 4. Enable pnpm and build dependencies
+echo -e "${BLUE}[INFO] Enabling pnpm (Zigbee2MQTT's official package manager)...${NC}"
+corepack enable 2>/dev/null || npm install -g pnpm
+
+echo -e "${BLUE}[INFO] Installing Zigbee2MQTT packages via pnpm (this may take 1-2 minutes)...${NC}"
 cd "$Z2M_DIR"
-npm ci --no-audit --no-fund --omit=dev
+if command -v pnpm >/dev/null 2>&1; then
+    pnpm install --frozen-lockfile || pnpm install
+else
+    npm install --no-audit --no-fund
+fi
 
 # 5. Copy configuration and failsafe converter
 mkdir -p "$Z2M_DATA"
@@ -104,6 +111,8 @@ if [[ "$INIT_SYS" == "systemd" ]]; then
     systemctl enable --now mosquitto.service || true
 
     cp "${SCRIPT_DIR}/systemd/zigbee2mqtt.service" /etc/systemd/system/
+    NODE_BIN="$(command -v node || echo /usr/bin/node)"
+    sed -i "s|/usr/bin/node|${NODE_BIN}|g" /etc/systemd/system/zigbee2mqtt.service
     systemctl daemon-reload
     systemctl enable --now zigbee2mqtt.service
     echo -e "${GREEN}[SUCCESS] zigbee2mqtt.service enabled and started.${NC}"
