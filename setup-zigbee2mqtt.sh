@@ -47,7 +47,15 @@ case "$DISTRO" in
     debian|ubuntu)
         export DEBIAN_FRONTEND=noninteractive
         apt-get update -qq
-        apt-get install -y --no-install-recommends nodejs npm git make g++ gcc mosquitto
+        apt-get install -y --no-install-recommends curl ca-certificates gnupg git make g++ gcc mosquitto
+
+        # Zigbee2MQTT requires Node.js >= 20.x for ES Module support (srvx)
+        NODE_MAJOR=$(node -v 2>/dev/null | cut -d'.' -f1 | tr -d 'v' || echo "0")
+        if [[ "$NODE_MAJOR" -lt 20 ]]; then
+            echo -e "${BLUE}[INFO] Upgrading Node.js to Node.js 20 LTS (required by modern Zigbee2MQTT)...${NC}"
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt-get install -y --no-install-recommends nodejs
+        fi
         ;;
     alpine)
         apk update
