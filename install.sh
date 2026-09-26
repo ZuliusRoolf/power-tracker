@@ -205,7 +205,7 @@ log_info "Installing Python dependencies (websockets, datasette, datasette-plot)
 "${VENV_DIR}/bin/pip" install --quiet \
     "websockets>=12.0" \
     "datasette>=0.64" \
-    "datasette-plot>=0.2.0"
+    "datasette-plot>=0.1.0"
 
 # Verify datasette-plot plugin is active
 if "${VENV_DIR}/bin/datasette" plugins | grep -q "datasette-plot"; then
@@ -236,33 +236,19 @@ log_info "Initializing SQLite database at ${DATA_DIR}/energy_monitor.db..."
 log_success "Database schema and SQL views created successfully."
 
 # ------------------------------------------------------------------------------
-# 9. Zigbee2MQTT Failsafe Protection Setup
+# 9. Zigbee2MQTT Failsafe Protection & Installation Setup
 # ------------------------------------------------------------------------------
 echo ""
-log_info "Configuring Zigbee2MQTT failsafe protection..."
+log_info "Configuring Zigbee2MQTT..."
 
-# If Zigbee2MQTT is installed in standard paths, copy the external converter
-Z2M_DATA_PATHS=(
-    "/opt/zigbee2mqtt/data"
-    "/app/data"
-    "/data/zigbee2mqtt"
-    "/var/lib/zigbee2mqtt"
-)
-
-CONVERTER_INSTALLED=false
-for zpath in "${Z2M_DATA_PATHS[@]}"; do
-    if [[ -d "$zpath" ]]; then
-        cp "${INSTALL_DIR}/zigbee2mqtt/inspelning-failsafe.js" "${zpath}/"
-        log_success "Copied failsafe converter 'inspelning-failsafe.js' into ${zpath}"
-        CONVERTER_INSTALLED=true
-        break
-    fi
-done
-
-if [[ "$CONVERTER_INSTALLED" = false ]]; then
-    log_info "Zigbee2MQTT data folder not yet created or located elsewhere."
-    log_info "Failsafe converter is available at: ${INSTALL_DIR}/zigbee2mqtt/inspelning-failsafe.js"
-    log_info "Ensure you copy it into your Zigbee2MQTT data directory and register in configuration.yaml."
+if [[ ! -d "/opt/zigbee2mqtt" ]]; then
+    log_info "Zigbee2MQTT was not found at /opt/zigbee2mqtt. Launching automated installer..."
+    bash "${INSTALL_DIR}/setup-zigbee2mqtt.sh"
+else
+    # Copy latest failsafe converter into data directory
+    mkdir -p /opt/zigbee2mqtt/data
+    cp "${INSTALL_DIR}/zigbee2mqtt/inspelning-failsafe.js" /opt/zigbee2mqtt/data/
+    log_success "Updated failsafe converter in /opt/zigbee2mqtt/data/"
 fi
 
 # ------------------------------------------------------------------------------

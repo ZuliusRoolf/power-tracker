@@ -1,0 +1,24 @@
+[Unit]
+Description=Zigbee2MQTT
+Documentation=https://www.zigbee2mqtt.io
+After=network.target network-online.target mosquitto.service
+Wants=network-online.target mosquitto.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/zigbee2mqtt
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10s
+
+# Memory cap for 512MB RAM LXC container (Z2M typically uses 60-90MB)
+MemoryHigh=120M
+MemoryMax=150M
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=zigbee2mqtt
+
+[Install]
+WantedBy=multi-user.target

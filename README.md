@@ -146,6 +146,7 @@ If configuring via the Proxmox host CLI or using older versions:
 Run the turnkey `install.sh` script inside your LXC container. It automatically:
 - Detects the OS (Debian Slim or Alpine Linux) and init system (`systemd` or `openrc`).
 - Scans for the SONOFF USB dongle.
+- Installs and configures Zigbee2MQTT (`/opt/zigbee2mqtt`) and Mosquitto broker if not already present.
 - Installs minimal system packages (`mosquitto`, `sqlite3`, `python3-venv`).
 - Sets up a dedicated Python virtualenv (`/opt/power-tracker/venv`).
 - Installs `websockets`, `datasette`, and `datasette-plot`.
